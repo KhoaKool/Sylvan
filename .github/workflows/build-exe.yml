@@ -1,30 +1,53 @@
 name: Build Sylvan EXE
+
 on:
   push:
     branches: [ master ]
   workflow_dispatch:
+
 jobs:
   build:
     name: Build EXE Windows
     runs-on: windows-latest
+
     steps:
       - name: 📥 Lấy mã nguồn
         uses: actions/checkout@v4
 
-      - name: 📦 Cài Qt 5.15 — KHỚP MSVC 2019
+      - name: 📦 Cài Qt 5.15
         uses: jurplel/install-qt-action@v4
         with:
           version: '5.15.2'
           host: 'windows'
           target: 'desktop'
-          arch: 'win64_msvc2019_64'  # ✅ Đã dùng MSVC2019 — rất tốt!
+          arch: 'win64_msvc2019_64'
 
-      - name: ⚙️ Chuẩn bị trình biên dịch — KHÓA MSVC 2019
+      - name: 🩹 Vá lỗi Qt 5.15.2 với MSVC mới (stdext đã bị xóa)
+        shell: powershell
+        run: |
+          qtInc=Join−PathqtInc = Join-PathqtInc=Join−Pathenv:QT_ROOT_DIR 'include\QtCore'
+          if (-not (Test-Path $qtInc)) {
+            Write-Error "Khong tim thay thu muc Qt include: $qtInc"
+            exit 1
+          }
+          foreach ($f in @('qglobal.h', 'qvector.h')) {
+            p=Join−Pathp = Join-Pathp=Join−PathqtInc $f
+            if (Test-Path $p) {
+              content=Get−Contentcontent = Get-Contentcontent=Get−Contentp -Raw
+              patched=patched =patched=content -replace 'stdext::make_checked_array_iterator\([^)]*\)', 'x'
+              if (patched−nepatched -nepatched−necontent) {
+                Set-Content -Path p−Valuep -Valuep−Valuepatched -NoNewline
+                Write-Host "Da va $p"
+              } else {
+                Write-Host "Khong co gi de va trong $p"
+              }
+            }
+          }
+
+      - name: ⚙️ Chuẩn bị trình biên dịch
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: amd64                # ✅ Khớp 64-bit Qt
-          msvc-version: '14.2'       # ✅ KHÓA = MSVC 2019 (không đổi)
-          vs-version: '16.11'         # ✅ Khớp VS 2019
+          arch: x64
 
       - name: 🔧 Tạo cấu hình
         run: qmake sylvan.pro -spec win32-msvc "CONFIG+=release"
@@ -37,11 +60,13 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path .\release -Force
           Get-ChildItem -Path . -Recurse -Filter "sylvan.exe" | Copy-Item -Destination .\release\
-          Get-ChildItem -Path . -Recurse -Filter "sylvan-cli.exe" | Copy-Item -Destination .\release\
+          Get-ChildItem -Path . -Recurse -Filter "sylvan-cli.exe" -ErrorAction SilentlyContinue | Copy-Item -Destination .\release\
 
-      - name: 📦 Đóng gói thư viện Qt
+      - name: 📦 Đóng gói thư viện kèm theo
         shell: powershell
-        run: windeployqt .\release\sylvan.exe --release --no-translations
+        run: |
+          env:PATH="env:PATH = "env:PATH="env:QT_ROOT_DIR\bin;$env:PATH"
+          windeployqt .\release\sylvan.exe --release --no-translations
 
       - name: 📤 Nén thành tệp ZIP
         shell: powershell
