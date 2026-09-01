@@ -95,11 +95,20 @@ jobs:
             Write-Host "Da copy: (((exe.FullName)"
           }
 
+          $cli = Get-ChildItem -Path . -Recurse -Filter "sylvan-cli.exe" -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notlike "*\release\*" } |
+            Select-Object -First 1
+
+          if ($cli) {
+            Copy-Item -Path $cli.FullName -Destination .\release\ -Force
+            Write-Host "Da copy: (((cli.FullName)"
+          }
+
           if (-not (Test-Path .\release\sylvan.exe)) {
             throw "LOI: Khong tim thay sylvan.exe sau khi build."
           }
 
-            - name: 📦 Đóng gói thư viện kèm theo
+      - name: 📦 Đóng gói thư viện kèm theo
         shell: cmd
         run: |
           set PATH=%QT_ROOT_DIR%\bin;%PATH%
@@ -112,9 +121,14 @@ jobs:
           if not exist release\iconengines mkdir release\iconengines
           xcopy /Y /I "%QT_ROOT_DIR%\plugins\iconengines\qsvgicon.dll" release\iconengines\
 
-          rem ==== QUAN TRONG:quan co + nen bang nam o day ====
+          rem ==== QUAN TRONG: quan co (default.svg) — code tai tu image\ canh EXE ====
           xcopy /E /I /Y "projects\gui\image" "release\image\"
 
+          rem Code can image\bg.jpg cho nen bang — neu repo chi co bbj.jpg thi dung thay
+          if exist release\image\bbj.jpg if not exist release\image\bg.jpg copy /Y release\image\bbj.jpg release\image\bg.jpg
+
+          echo === Noi dung release ===
+          dir /B release
           echo === Noi dung release\image ===
           dir /B release\image
 
