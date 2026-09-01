@@ -99,30 +99,24 @@ jobs:
             throw "LOI: Khong tim thay sylvan.exe sau khi build."
           }
 
-      - name: 📦 Đóng gói thư viện kèm theo
+            - name: 📦 Đóng gói thư viện kèm theo
         shell: cmd
         run: |
           set PATH=%QT_ROOT_DIR%\bin;%PATH%
           if not exist release\sylvan.exe exit /b 1
           windeployqt release\sylvan.exe --release --no-translations
 
-          rem Dam bao co plugin SVG (quan co duoc ve bang SVG)
           if not exist release\imageformats mkdir release\imageformats
           xcopy /Y /I "%QT_ROOT_DIR%\plugins\imageformats\qsvg.dll" release\imageformats\
           if not exist release\Qt5Svg.dll copy /Y "%QT_ROOT_DIR%\bin\Qt5Svg.dll" release\
-
-          rem Icon SVG (neu dung)
           if not exist release\iconengines mkdir release\iconengines
           xcopy /Y /I "%QT_ROOT_DIR%\plugins\iconengines\qsvgicon.dll" release\iconengines\
 
-          rem Sao chep thu muc tai nguyen neu du an co (pieces/themes/styles)
-          if exist pieces      xcopy /E /I /Y pieces      release\pieces
-          if exist themes      xcopy /E /I /Y themes      release\themes
-          if exist styles      xcopy /E /I /Y styles      release\styles
+          rem ==== QUAN TRONG:quan co + nen bang nam o day ====
+          xcopy /E /I /Y "projects\gui\image" "release\image\"
 
-          echo === Noi dung release ===
-          dir /B release
-          dir /B release\imageformats
+          echo === Noi dung release\image ===
+          dir /B release\image
 
       - name: 📤 Nén thành tệp ZIP
         shell: cmd
