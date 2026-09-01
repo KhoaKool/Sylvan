@@ -66,12 +66,11 @@ jobs:
 
           qt_inc = os.path.join(os.environ['QT_ROOT_DIR'], 'include')
           leftover = []
-          for dir, _, filenames in os.walk(qt_inc):
+          for dirpath, _, filenames in os.walk(qt_inc):
               for name in filenames:
                   if not name.endswith(('.h', '.cpp')):
                       continue
-                  path = os.path.join(dirpath, name)
-                  with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                  path = os.path.join(dirpath, open(path, 'r', encoding='utf-8', errors='ignore') as f:
                       if 'make_checked_array_iterator' in f.read():
                           leftover.append(path)
 
@@ -112,5 +111,5 @@ jobs:
       - name: ✅ Tải kết quả lên
         uses: actions/upload-artifact@v4
         with:
-          name Sylvan-EXE-Windows
+          name: Sylvan-EXE-Windows
           path: .\Sylvan-Windows.zip
