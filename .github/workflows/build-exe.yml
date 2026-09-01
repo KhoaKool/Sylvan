@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: 📥 Lấy mã nguồn
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📦 Cài Qt 5.15
         uses: jurplel/install-qt-action@v4
@@ -70,7 +70,8 @@ jobs:
               for name in filenames:
                   if not name.endswith(('.h', '.cpp')):
                       continue
-                  path = os.path.join(dirpath, open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                  path = os.path.join(dirpath, name)
+                  with open(path, 'r', encoding='utf-8', errors='ignore') as f:
                       if 'make_checked_array_iterator' in f.read():
                           leftover.append(path)
 
@@ -109,7 +110,7 @@ jobs:
         run: Compress-Archive -Path .\release\* -DestinationPath .\Sylvan-Windows.zip
 
       - name: ✅ Tải kết quả lên
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Sylvan-EXE-Windows
           path: .\Sylvan-Windows.zip
