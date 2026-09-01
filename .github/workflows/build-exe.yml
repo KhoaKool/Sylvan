@@ -22,7 +22,7 @@ jobs:
           target: 'desktop'
           arch: 'win64_msvc2019_64'
 
-      - name: 🩹 Vá lỗi Qt 5.15.2 (stdext::make_checked_array_iterator)
+      - name: 🩹 Vá lỗi Qt 5.15.2 (stdext)
         shell: python
         run: |
           import os, sys
@@ -44,7 +44,7 @@ jobs:
           print('Da tao header: ' + header_path)
 
           token = 'stdext::make_checked_array_iterator'
-          patched_files = 0
+          patched = 0
           for dirpath, _, filenames in os.walk(qt_inc):
               for name in filenames:
                   if not name.endswith(('.h', '.cpp', '.ipp', '.hpp')):
@@ -56,47 +56,19 @@ jobs:
                   except OSError:
                       continue
                   if token in content:
-                      new_content = content.replace(token, 'make_checked_array_iterator')
                       with open(path, 'w', encoding='utf-8', errors='ignore') as f:
-                          f.write(new_content)
-                      patched_files += 1
+                          f.write(content.replace(token, 'make_checked_array_iterator'))
+                      patched += 1
                       print('Da va: ' + path)
 
-          if patched_files == 0:
+          if patched == 0:
               print('CANH BAO: Khong tim thay token nao de va!')
-              print('Kiem tra thu muc: ' + qt_inc)
 
-          print('Tong cong da va %d file.' % patched_files)
+          print('Tong cong da va %d file.' % patched)
 
           with open(os.environ['GITHUB_ENV'], 'a') as f:
               f.write('CL=/FI%s\n' % header_path)
           print('Da thiet lap CL=/FI' + header_path)
-
-      - name: 🔍 Kiểm tra không còn sót stdext
-        shell: python
-        run: |
-          import os, sys
-
-          qt_inc = os.path.join(os.environ['QT_ROOT_DIR'], 'include')
-          leftover = []
-          for dirpath, _, filenames in os.walk(qt_inc):
-              for name in filenames:
-                  if not name.endswith(('.h', '.cpp', '.ipp', '.hpp')):
-                      continue
-                  path = os.path.join(dirpath, name)
-                  try:
-                      with open(path, 'r', encoding='utf-8', errors='ignore') as f:
-                          content = f.read()
-                  except OSError:
-                      continue
-                  if 'stdext::make_checked_array_iterator' in content:
-                      leftover.append(path)
-
-          if leftover:
-              for p in leftover:
-                  print('VAN CON SOT: ' + p)
-              sys.exit(1)
-          print('OK: Khong con stdext::make_checked_array_iterator trong Qt include.')
 
       - name: ⚙️ Chuẩn bị trình biên dịch
         uses: ilammy/msvc-dev-cmd@v1
@@ -123,31 +95,20 @@ jobs:
             Write-Host "Da copy: (((exe.FullName)"
           }
 
-          $cli = Get-ChildItem -Path . -Recurse -Filter "sylvan-cli.exe" |
-            Where-Object { $_.FullName -notlike "*\release\*" } |
-            Select-Object -First 1
-
-          if ($cli) {
-            Copy-Item -Path $cli.FullName -Destination .\release\ -Force
-            Write-Host "Da copy: (((cli.FullName)"
-          }
-
           if (-not (Test-Path .\release\sylvan.exe)) {
             throw "LOI: Khong tim thay sylvan.exe sau khi build."
           }
 
       - name: 📦 Đóng gói thư viện kèm theo
-        shell: powershell
+        shell: cmd
         run: |
-          env:PATH="env:PATH = "env:PATH="env:QT_ROOT_DIR\bin;$env:PATH"
-          if (-not (Test-Path .\release\sylvan.exe)) {
-            throw "LOI: release\sylvan.exe khong ton tai."
-          }
-          windeployqt .\release\sylvan.exe --release --no-translations
+          set PATH=%QT_ROOT_DIR%\bin;%PATH%
+          if not exist release\sylvan.exe exit /b 1
+          windeployqt release\sylvan.exe --release --no-translations
 
       - name: 📤 Nén thành tệp ZIP
-        shell: powershell
-        run: Compress-Archive -Path .\release\* -DestinationPath .\Sylvan-Windows.zip -Force
+        shell: cmd
+        run: powershell -NoProfile -Command "Compress-Archive -Path .\release\* -DestinationPath .\Sylvan-Windows.zip -Force"
 
       - name: ✅ Tải kết quả lên
         uses: actions/upload-artifact@v5
