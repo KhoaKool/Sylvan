@@ -23,26 +23,29 @@ jobs:
           arch: 'win64_msvc2019_64'
 
       - name: 🩹 Vá lỗi Qt 5.15.2 với MSVC mới (stdext đã bị xóa)
-        shell: powershell
+        shell: python
         run: |
-          qtInc=Join−PathqtInc = Join-PathqtInc=Join−Pathenv:QT_ROOT_DIR 'include\QtCore'
-          if (-not (Test-Path $qtInc)) {
-            Write-Error "Khong tim thay thu muc Qt include: $qtInc"
-            exit 1
-          }
-          foreach ($f in @('qglobal.h', 'qvector.h')) {
-            p=Join−Pathp = Join-Pathp=Join−PathqtInc $f
-            if (Test-Path $p) {
-              content=Get−Contentcontent = Get-Contentcontent=Get−Contentp -Raw
-              patched=patched =patched=content -replace 'stdext::make_checked_array_iterator\([^)]*\)', 'x'
-              if (patched−nepatched -nepatched−necontent) {
-                Set-Content -Path p−Valuep -Valuep−Valuepatched -NoNewline
-                Write-Host "Da va $p"
-              } else {
-                Write-Host "Khong co gi de va trong $p"
-              }
-            }
-          }
+          import os
+
+          qt_inc = os.path.join(os.environ['QT_ROOT_DIR'], 'include', 'QtCore')
+          if not os.path.isdir(qt_inc):
+              raise SystemExit('Khong tim thay thu muc Qt include: ' + qt_inc)
+
+          needle = 'stdext::make_checked_array_iterator'
+          for fname in ('qglobal.h', 'qvector.h'):
+              path = os.path.join(qt_inc, fname)
+              if not os.path.isfile(path):
+                  continue
+              with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                  content = f.read()
+              if needle in content:
+                  import re
+                  patched = re.sub(r'stdext::make_checked_array_iterator\([^)]*\)', 'x', content)
+                  with open(path, 'w', encoding='utf-8', errors='ignore') as f:
+                      f.write(patched)
+                  print('Da va:', path)
+              else:
+                  print('Khong co gi de va trong:', path)
 
       - name: ⚙️ Chuẩn bị trình biên dịch
         uses: ilammy/msvc-dev-cmd@v1
