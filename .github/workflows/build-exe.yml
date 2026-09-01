@@ -22,30 +22,64 @@ jobs:
           target: 'desktop'
           arch: 'win64_msvc2019_64'
 
-      - name: 🩹 Vá lỗi Qt 5.15.2 với MSVC mới (stdext đã bị xóa)
+      - name: 🩹 Vá lỗi Qt 5.15.2 (stdext::make_checked_array_iterator)
         shell: python
         run: |
-          import os
+          import os, re, sys
 
-          qt_inc = os.path.join(os.environ['QT_ROOT_DIR'], 'include', 'QtCore')
-          if not os.path.isdir(qt_inc):
-              raise SystemExit('Khong tim thay thu muc Qt include: ' + qt_inc)
+          qt_root = os.environ.get('QT_ROOT_DIR')
+          if not qt_root or not os.path.isdir(qt_root):
+              raise SystemExit('LOI: QT_ROOT_DIR khong hop le: ' + repr(qt_root))
 
-          needle = 'stdext::make_checked_array_iterator'
-          for fname in ('qglobal.h', 'qvector.h'):
-              path = os.path.join(qt_inc, fname)
-              if not os.path.isfile(path):
-                  continue
-              with open(path, 'r', encoding='utf-8', errors='ignore') as f:
-                  content = f.read()
-              if needle in content:
-                  import re
-                  patched = re.sub(r'stdext::make_checked_array_iterator\([^)]*\)', 'x', content)
-                  with open(path, 'w', encoding='utf-8', errors='ignore') as f:
-                      f.write(patched)
-                  print('Da va:', path)
-              else:
-                  print('Khong co gi de va trong:', path)
+          qt_inc = os.path.join(qt_root, 'include')
+          pattern = re.compile(r'stdext::make_checked_array_iterator\s*\([^)]*\)')
+          patched_files = []
+
+          for dirpath, _, filenames in os.walk(qt_inc):
+              for name in filenames:
+                  if not name.endswith(('.h', '.cpp')):
+                      continue
+                  path = os.path.join(dirpath, name)
+                  try:
+                      with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                          content = f.read()
+                  except OSError:
+                      continue
+                  if 'make_checked_array_iterator' in content:
+                      new_content, n = pattern.subn('x', content)
+                      with open(path, 'w', encoding='utf-8', errors='ignore') as f:
+                          f.write(new_content)
+                      patched_files.append((path, n))
+                      print('Da va %d cho trong: %s' % (n, path))
+
+          if not patched_files:
+              print('CANH BAO: Khong tim thay stdext nao de va!')
+              print('Kiem tra thu muc: ' + qt_inc)
+              sys.exit(1)
+
+          print('Tong cong da va %d file.' % len(patched_files))
+
+      - name: 🔍 Kiểm tra không còn sót stdext
+        shell: python
+        run: |
+          import os, sys
+
+          qt_inc = os.path.join(os.environ['QT_ROOT_DIR'], 'include')
+          leftover = []
+          for dir, _, filenames in os.walk(qt_inc):
+              for name in filenames:
+                  if not name.endswith(('.h', '.cpp')):
+                      continue
+                  path = os.path.join(dirpath, name)
+                  with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+                      if 'make_checked_array_iterator' in f.read():
+                          leftover.append(path)
+
+          if leftover:
+              for p in leftover:
+                  print('VAN CON SOT: ' + p)
+              sys.exit(1)
+          print('OK: Khong con stdext nao trong Qt include.')
 
       - name: ⚙️ Chuẩn bị trình biên dịch
         uses: ilammy/msvc-dev-cmd@v1
@@ -78,5 +112,5 @@ jobs:
       - name: ✅ Tải kết quả lên
         uses: actions/upload-artifact@v4
         with:
-          name: Sylvan-EXE-Windows
+          name Sylvan-EXE-Windows
           path: .\Sylvan-Windows.zip
