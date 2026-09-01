@@ -1,31 +1,30 @@
 name: Build Sylvan EXE
-
 on:
   push:
     branches: [ master ]
   workflow_dispatch:
-
 jobs:
   build:
     name: Build EXE Windows
     runs-on: windows-latest
-
     steps:
       - name: 📥 Lấy mã nguồn
         uses: actions/checkout@v4
 
-      - name: 📦 Cài Qt 5.15
+      - name: 📦 Cài Qt 5.15 — KHỚP MSVC 2019
         uses: jurplel/install-qt-action@v4
         with:
           version: '5.15.2'
           host: 'windows'
           target: 'desktop'
-          arch: 'win64_msvc2019_64'
+          arch: 'win64_msvc2019_64'  # ✅ Đã dùng MSVC2019 — rất tốt!
 
-      - name: ⚙️ Chuẩn bị trình biên dịch
+      - name: ⚙️ Chuẩn bị trình biên dịch — KHÓA MSVC 2019
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: x64
+          arch: amd64                # ✅ Khớp 64-bit Qt
+          msvc-version: '14.2'       # ✅ KHÓA = MSVC 2019 (không đổi)
+          vs-version: '16.11'         # ✅ Khớp VS 2019
 
       - name: 🔧 Tạo cấu hình
         run: qmake sylvan.pro -spec win32-msvc "CONFIG+=release"
