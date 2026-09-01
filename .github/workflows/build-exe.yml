@@ -40,7 +40,7 @@ jobs:
           Get-ChildItem -Path . -Recurse -Filter "sylvan.exe" | Copy-Item -Destination .\release\
           Get-ChildItem -Path . -Recurse -Filter "sylvan-cli.exe" | Copy-Item -Destination .\release\
 
-      - name: 📦 Đóng gói thư viện kèm theo
+      - name: 📦 Đóng gói thư viện Qt
         shell: powershell
         run: windeployqt .\release\sylvan.exe --release --no-translations
 
