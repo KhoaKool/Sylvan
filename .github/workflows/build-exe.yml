@@ -1,0 +1,55 @@
+name: Build Sylvan EXE
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build EXE Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: 📥 Lấy mã nguồn
+        uses: actions/checkout@v4
+
+      - name: 📦 Cài Qt 5.15
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '5.15.2'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2019_64'
+
+      - name: ⚙️ Chuẩn bị trình biên dịch
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: 🔧 Tạo cấu hình
+        run: qmake sylvan.pro -spec win32-msvc "CONFIG+=release"
+
+      - name: 🔨 Biên dịch
+        run: nmake
+
+      - name: 📁 Sao chép tệp EXE
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Path .\release -Force
+          Get-ChildItem -Path . -Recurse -Filter "sylvan.exe" | Copy-Item -Destination .\release\
+          Get-ChildItem -Path . -Recurse -Filter "sylvan-cli.exe" | Copy-Item -Destination .\release\
+
+      - name: 📦 Đóng gói thư viện kèm theo
+        shell: powershell
+        run: windeployqt .\release\sylvan.exe --release --no-translations
+
+      - name: 📤 Nén thành tệp ZIP
+        shell: powershell
+        run: Compress-Archive -Path .\release\* -DestinationPath .\Sylvan-Windows.zip
+
+      - name: ✅ Tải kết quả lên
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sylvan-EXE-Windows
+          path: .\Sylvan-Windows.zip
